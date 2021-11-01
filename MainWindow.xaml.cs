@@ -254,7 +254,6 @@ namespace PdfImageThresholdingTool
                                     scan[x / 8] = 0;
                                 }
                                 Color c = pageBitmap.GetPixel(x, y);
-                                // TODO: ここの閾値は外部から設定できるようにする
                                 if (c.GetBrightness() >= Threshold / 100.0) {
                                     scan[x / 8] |= (byte)(0x80 >> (x % 8));
                                 }

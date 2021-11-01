@@ -18,6 +18,16 @@
                 SmallChange="1"
                 LargeChange="10"/>
             <TextBlock Text="{Binding Value, ElementName=threshold}"/>
+            <Label Content="ボールド化距離"/>
+            <Slider
+                x:Name="boldDistance"
+                IsSnapToTickEnabled="True"
+                Minimum="0"
+                Maximum="10"
+                TickFrequency="1"
+                SmallChange="1"
+                LargeChange="2"/>
+            <TextBlock Text="{Binding Value, ElementName=boldDistance}"/>
             <Grid HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal" Margin="10">
                     <StackPanel.Resources>

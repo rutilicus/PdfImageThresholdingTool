@@ -21,6 +21,7 @@ namespace PdfImageThresholdingTool
         private readonly ObservableCollection<PageData> PageData =
             new ObservableCollection<PageData>();
         private int Threshold = 70;
+        private int BoldDistance = 0;
         public MainWindow() {
             InitializeComponent();
 
@@ -193,9 +194,11 @@ namespace PdfImageThresholdingTool
         }
 
         private void MenuItem_Settings_Click(object sender, RoutedEventArgs e) {
-            SettingsWindow settingsWindow = new SettingsWindow(Threshold);
+            SettingsWindow settingsWindow =
+                new SettingsWindow(Threshold, BoldDistance);
             settingsWindow.ShowDialog();
             Threshold = settingsWindow.Threshold;
+            BoldDistance = settingsWindow.BoldDistance;
         }
 
         private void MenuItem_Item_Add_Click(object sender, RoutedEventArgs e) {
@@ -210,6 +213,38 @@ namespace PdfImageThresholdingTool
                 item.IsConvertTarget = false;
             }
             CollectionViewSource.GetDefaultView(PageData).Refresh();
+        }
+
+        private void BoldBinaryData(
+            byte[] bold, int width, int height,
+            int x, int y, int stride, int remainDistance) {
+            bold[y * stride + x / 8] &= (byte)~(0x80 >> (x % 8));
+
+            if (remainDistance == 0) {
+                return;
+            }
+
+            // 効率悪いのでアルゴリズム改善を将来的には行う
+            if (x > 0) {
+                BoldBinaryData(
+                    bold, width, height,
+                    x - 1, y, stride, remainDistance - 1);
+            }
+            if (x < width - 1) {
+                BoldBinaryData(
+                    bold, width, height,
+                    x + 1, y, stride, remainDistance - 1);
+            }
+            if (y > 0) {
+                BoldBinaryData(
+                    bold, width, height,
+                    x, y - 1, stride, remainDistance - 1);
+            }
+            if (y < height - 1) {
+                BoldBinaryData(
+                    bold, width, height,
+                    x, y + 1, stride, remainDistance - 1);
+            }
         }
 
         private void CreatePdf(string filePath) {
@@ -259,6 +294,20 @@ namespace PdfImageThresholdingTool
                                 }
                             }
                             Marshal.Copy(scan, 0, (IntPtr)((long)data.Scan0 + data.Stride * y), scan.Length);
+                        }
+                        if (BoldDistance != 0) {
+                            byte[] original = new byte[height * data.Stride];
+                            byte[] bold = new byte[height * data.Stride];
+                            Marshal.Copy(data.Scan0, original, 0, original.Length);
+                            Marshal.Copy(data.Scan0, bold, 0, bold.Length);
+                            for (int y = 0; y < height; y++) {
+                                for (int x = 0; x < width; x++) {
+                                    if ((original[y * data.Stride + x / 8] & (byte)(0x80 >> (x % 8))) == 0) {
+                                        BoldBinaryData(bold, width, height, x, y, data.Stride, BoldDistance);
+                                    }
+                                }
+                            }
+                            Marshal.Copy(bold, 0, data.Scan0, bold.Length);
                         }
                         thresholdingImage.UnlockBits(data);
                         thresholdingImage.SetResolution(
